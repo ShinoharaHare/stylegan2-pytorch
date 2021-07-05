@@ -137,10 +137,10 @@ def discriminator_fill_statedict(statedict, vars, size):
     return statedict
 
 
-def fill_statedict(state_dict, vars, size):
+def fill_statedict(state_dict, vars, size, n_dense=8):
     log_size = int(math.log(size, 2))
 
-    for i in range(8):
+    for i in range(n_dense):
         update(state_dict, convert_dense(vars, f'G_mapping/Dense{i}', f'style.{i + 1}'))
 
     update(
@@ -206,6 +206,14 @@ def fill_statedict(state_dict, vars, size):
     return state_dict
 
 
+def get_dense_num(g_ema):
+    n_dense = 0
+    for key in g_ema.vars.keys():
+        if 'G_mapping/Dense' in key:
+            idx = key.find('Dense')
+            n_dense = max(n_dense, int(key[idx + 5]))
+    return n_dense + 1
+
 if __name__ == '__main__':
     device = 'cpu'
 
@@ -214,6 +222,7 @@ if __name__ == '__main__':
     parser.add_argument('--gen', action='store_true')
     parser.add_argument('--disc', action='store_true')
     parser.add_argument('--channel_multiplier', type=int, default=2)
+    parser.add_argument('--output', type=str, default='.')
     parser.add_argument('path', metavar='PATH')
 
     args = parser.parse_args()
@@ -229,10 +238,11 @@ if __name__ == '__main__':
         generator, discriminator, g_ema = pickle.load(f)
 
     size = g_ema.output_shape[2]
+    n_dense = get_dense_num(g_ema)
 
-    g = Generator(size, 512, 8, channel_multiplier=args.channel_multiplier)
+    g = Generator(size, 512, n_dense, channel_multiplier=args.channel_multiplier)
     state_dict = g.state_dict()
-    state_dict = fill_statedict(state_dict, g_ema.vars, size)
+    state_dict = fill_statedict(state_dict, g_ema.vars, size, n_dense)
 
     g.load_state_dict(state_dict)
 
@@ -252,7 +262,9 @@ if __name__ == '__main__':
         d_state = discriminator_fill_statedict(d_state, discriminator.vars, size)
         ckpt['d'] = d_state
 
+
     name = os.path.splitext(os.path.basename(args.path))[0]
+    name = os.path.join(args.output, name)
     torch.save(ckpt, name + '.pt')
     torch.save(g, name + '_g.pt')
 
