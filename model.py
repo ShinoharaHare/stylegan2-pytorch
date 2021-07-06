@@ -476,37 +476,12 @@ class Generator(nn.Module):
         styles,
         truncation,
     ):
-        styles = [self.style(s) for s in styles]
+        styles = self.style(styles)
+        latent = self.truncation_latent + truncation * (styles - self.truncation_latent)
 
         noise = [
             getattr(self.noises, f'noise_{i}') for i in range(self.num_layers)
         ]
-
-        style_t = []
-
-        for style in styles:
-            style_t.append(
-                self.truncation_latent + truncation * (style - self.truncation_latent)
-            )
-
-        styles = style_t
-
-        if len(styles) < 2:
-            inject_index = self.n_latent
-
-            if styles[0].ndim < 3:
-                latent = styles[0].unsqueeze(1).repeat(1, inject_index, 1)
-
-            else:
-                latent = styles[0]
-
-        else:
-            inject_index = random.randint(1, self.n_latent - 1)
-
-            latent = styles[0].unsqueeze(1).repeat(1, inject_index, 1)
-            latent2 = styles[1].unsqueeze(1).repeat(1, self.n_latent - inject_index, 1)
-
-            latent = torch.cat([latent, latent2], 1)
 
         out = self.input(latent)
         out = self.conv1(out, latent[:, 0], noise=noise[0])

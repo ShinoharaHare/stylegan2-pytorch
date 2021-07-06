@@ -273,11 +273,11 @@ if __name__ == '__main__':
 
     g = g.to(device)
 
-    z = np.random.RandomState(0).randn(n_sample, 512).astype('float32')
+    z = np.random.RandomState(0).randn(n_sample, g.num_layers + 1, 512).astype('float32')
 
     with torch.no_grad():
         img_pt = g(
-            styles=[torch.from_numpy(z).to(device)],
+            styles=torch.from_numpy(z).to(device),
             truncation=torch.tensor(.5),
         )
 
