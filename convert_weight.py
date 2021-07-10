@@ -222,6 +222,7 @@ if __name__ == '__main__':
     parser.add_argument('--gen', action='store_true')
     parser.add_argument('--disc', action='store_true')
     parser.add_argument('--channel_multiplier', type=int, default=2)
+    parser.add_argument('--n_mlp', type=int, default=8)
     parser.add_argument('--output', type=str, default='.')
     parser.add_argument('path', metavar='PATH')
 
@@ -240,7 +241,7 @@ if __name__ == '__main__':
     size = g_ema.output_shape[2]
     n_dense = get_dense_num(g_ema)
 
-    g = Generator(size, 512, n_dense, channel_multiplier=args.channel_multiplier)
+    g = Generator(size, 512, args.n_mlp, channel_multiplier=args.channel_multiplier)
     state_dict = g.state_dict()
     state_dict = fill_statedict(state_dict, g_ema.vars, size, n_dense)
 
