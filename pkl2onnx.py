@@ -217,6 +217,7 @@ def get_dense_num(g_ema):
     return n_dense + 1
 
 
+
 if __name__ == '__main__':
     device = 'cpu'
 
@@ -224,8 +225,8 @@ if __name__ == '__main__':
     parser.add_argument('--repo', type=str, default='./stylegan2-ada')
     parser.add_argument('--latent_dim', type=int, default=512)
     parser.add_argument('--channel_multiplier', type=int, default=2)
-    parser.add_argument('--output', type=str, default='./output')
-    parser.add_argument('path', metavar='PATH')
+    parser.add_argument('--outdir', type=str, default='./output')
+    parser.add_argument('path', metavar='PKL')
 
     args = parser.parse_args()
 
@@ -236,24 +237,18 @@ if __name__ == '__main__':
 
     tflib.init_tf()
 
-    with open(args.path, 'rb') as f:
-        generator, discriminator, g_ema = pickle.load(f)
-
+    with open(args.path, 'rb') as fp:
+        generator, discriminator, g_ema = pickle.load(fp)
+    
     size = g_ema.output_shape[2]
     n_dense = get_dense_num(g_ema)
-
     g = Generator(size, args.latent_dim, n_dense, channel_multiplier=args.channel_multiplier)
     state_dict = g.state_dict()
     state_dict = fill_statedict(state_dict, g_ema.vars, size, n_dense)
-
     g.load_state_dict(state_dict)
-
-    latent_avg = torch.from_numpy(g_ema.vars['dlatent_avg'].value().eval())
-
     g = g.to(device)
 
-
-    path = join(args.output, splitext(basename(args.path))[0] + '.onnx')
+    path = join(args.outdir, splitext(basename(args.path))[0] + '.onnx')
     latents = torch.rand(1, g.num_layers + 1, 512)
     truncation = torch.tensor(0.5)
 
